@@ -1,4 +1,4 @@
-from state import State
+from src.state import State
 from src.conllu.conllu_token import Token
 
 
