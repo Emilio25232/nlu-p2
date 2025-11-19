@@ -336,55 +336,62 @@ class ArcEager():
         #match exactly the gold arcs, otherwise the obtained sequence of transitions is not correct
         assert self.gold_arcs(sent) == state.A, f"Gold arcs {self.gold_arcs(sent)} and generated arcs {state.A} do not match"
     
-        return samples         
+        return samples   
+
+    
+    def has_head(self, token: 'Token', arcs: set) -> bool:
+        """
+        Checks if the token already has a head assigned (appears as a dependent in an arc).
+        
+        Args:
+            token: The Token to check.
+            arcs: A set of arcs in the format (head_id, dependency_label, dependent_id).
+        
+        Returns:
+            True if the token appears as a dependent (3rd element) in any arc.
+        """
+        if token is None:
+            return False
+        # Check if the token ID appears as the dependent (index 2) in any existing arc
+        return any(arc[2] == token.id for arc in arcs)
+      
     
 
     def apply_transition(self, state: State, transition: Transition):
         """
-        Applies a given transition to the current parsing state.
-
-        This method updates the state based on the type of transition - LEFT-ARC, RIGHT-ARC, 
-        or REDUCE - and the validity of applying such a transition in the current context.
-
-        Parameters:
-            state (State): The current parsing state, which includes a stack (S), 
-                        a buffer (B), and a set of arcs (A).
-            transition (Transition): The transition to be applied, consisting of an action
-                                    (LEFT-ARC, RIGHT-ARC, REDUCE) and an optional dependency label (only for LEFT-ARC and RIGHT-arc).
-
-        Returns:
-            None; the state is modified in place.
+        Applies a given Arc-Eager transition to the current parsing state.
+        
+        Args:
+            state: The current parsing state (Stack, Buffer, Arcs).
+            transition: The transition to apply (action, dependency).
         """
-
-        # Extract the action and dependency label from the transition
         t = transition.action
         dep = transition.dependency
-
-        # The top item on the stack and the first item in the buffer
-        s = state.S[-1] if state.S else None  # Top of the stack
-        b = state.B[0] if state.B else None   # First in the buffer
+        
+        # Get top of Stack (s) and top of Buffer (b) safely
+        s = state.S[-1] if state.S else None  
+        b = state.B[0] if state.B else None   
 
         if t == self.LA and self.LA_is_valid(state):
-            # LEFT-ARC transition logic: to be implemented
-            # Add an arc to the state from the top of the buffer to the top of the stack
-            # Remove from the state the top word from the stack
-            raise NotImplementedError
+            # LEFT-ARC: Creates an arc where the Head is the Buffer top (b) and Dependent is the Stack top (s).
+            # Then, removes the element from the Stack.
+            state.A.add((b.id, dep, s.id))
+            state.S.pop()
 
         elif t == self.RA and self.RA_is_valid(state): 
-            # RIGHT-ARC transition
-            # Add an arc to the state from the stack top to the buffer head with the specified dependency
-            # Move from the state the buffer head to the stack
-            # Remove from the state the first item from the buffer
-            raise NotImplementedError
+            # RIGHT-ARC: Creates an arc where the Head is the Stack top (s) and Dependent is the Buffer top (b).
+            # Then, moves the element from the Buffer to the Stack.
+            state.A.add((s.id, dep, b.id))
+            state.S.append(b)
+            del state.B[0]
 
         elif t == self.REDUCE and self.has_head(s, state.A): 
-            # REDUCE transition logic: to be implemented
-            # Remove from state the word from the top of the stack
-            raise NotImplementedError
+            # REDUCE: Removes the element from the Stack because it already has a head assigned.
+            state.S.pop()
 
         else:
-            # SHIFT transition logic: Already implemented! Use it as a basis to implement the others
-            #This involves moving the top of the buffer to the stack
+            # SHIFT: Moves the element from the Buffer to the Stack.
+            # (Default fallback action)
             state.S.append(b) 
             del state.B[:1]
     
