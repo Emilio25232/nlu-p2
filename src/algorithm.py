@@ -187,18 +187,29 @@ class ArcEager():
 
     def LA_is_valid(self, state: State) -> bool:
         """
-        Determines if a LEFT-ARC (LA) transition is valid for the current parsing state.
-
-        A LEFT-ARC transition is valid if certain preconditions are met in the parser's state.
-        This typically involves checking the current state of the stack and buffer in the parser.
-
-        Parameters:
-            state (State): The current state of the parser, including the stack and buffer.
-
-        Returns:
-            bool: True if a LEFT-ARC transition is valid in the current state, False otherwise.
+        LEFT-ARC is valid iff:
+        - Stack is non-empty
+        - Buffer is non-empty
+        - Top of stack is not ROOT
+        - Top of stack does NOT already have a head
         """
-        raise NotImplementedError
+        if not state.S:
+            return False
+        if not state.B:
+            return False
+
+        s = state.S[-1]
+
+        # Do not attach ROOT as dependent
+        if s.id == 0:
+            return False
+
+        # Ensure single-head constraint
+        if self.has_head(s, state.A):
+            return False
+
+        return True
+
 
     def LA_is_correct(self, state: State) -> bool:
         """
@@ -232,19 +243,23 @@ class ArcEager():
 
     def RA_is_valid(self, state: State) -> bool:
         """
-        Checks the preconditions in order to apply a right-arc (RA) transition.
-
-        A RIGHT-ARC transition is valid under certain conditions related to the state of the stack
-        and buffer in the parser. This method evaluates these conditions to determine if a RIGHT-ARC
-        can be applied.
-
-        Parameters:
-            state (State): The current parsing state of the parser.
-
-        Returns:
-            bool: True if a RIGHT-ARC transition can be validly applied in the current state, False otherwise.
+        RIGHT-ARC is valid iff:
+        - Stack is non-empty
+        - Buffer is non-empty
+        - Buffer head does NOT already have a head
         """
-        raise NotImplementedError
+        if not state.S:
+            return False
+        if not state.B:
+            return False
+
+        b = state.B[0]
+
+        # Ensure single-head constraint for buffer head
+        if self.has_head(b, state.A):
+            return False
+
+        return True
 
     def REDUCE_is_correct(self, state: State) -> bool:
         """
@@ -269,19 +284,17 @@ class ArcEager():
 
     def REDUCE_is_valid(self, state: State) -> bool:
         """
-        Determines if a REDUCE transition is valid for the current parsing state.
-
-        This method checks if the preconditions for applying a REDUCE transition are met in 
-        the current state of the parser. This typically involves assessing the state of the 
-        stack and buffer.
-
-        Parameters:
-            state (State): The current state of the parser, including the stack and buffer.
-
-        Returns:
-            bool: True if a REDUCE transition is valid in the current state, False otherwise.
+        REDUCE is valid iff:
+        - Stack is non-empty
+        - Top of stack already has a head
         """
-        raise NotImplementedError
+        if not state.S:
+            return False
+
+        s = state.S[-1]
+
+        # Only reduce if token already has a head
+        return self.has_head(s, state.A)
 
     def oracle(self, sent: list['Token']) -> list['Sample']:
         """
