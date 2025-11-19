@@ -1,6 +1,9 @@
 # Natural Language Understanding: Dependency Parsing
 
-The main goal is train and evalutate a **Dependency Parsing** based of the transition algorith **arc-eager** and a **feed-forward neural networkk** that predicts the next transitions from the actual state (stack, buffer, PoS tags, etc.) from CoNLL-U **UD_English-ParTUT**.
+# 🛑 DEADLINE
+## 8 DECEMBER 2025
+
+The main goal is to train and evaluate a **Dependency Parser** based on the transition algorithm **arc-eager** and a **feed-forward neural network** that predicts the next transitions from the current state (stack, buffer, PoS tags, etc.) using CoNLL-U **UD_English-ParTUT**.
 
 ---
 
@@ -15,9 +18,3 @@ The main goal is train and evalutate a **Dependency Parsing** based of the trans
     ├── train.conllu
     ├── dev.conllu
     └── test.conllu
-```
-
-## Dependencies
-
-Libraries used: 
-- `tensorflow`
