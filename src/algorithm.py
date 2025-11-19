@@ -1,5 +1,5 @@
 from state import State
-from conllu_token import Token
+from src.conllu.conllu_token import Token
 
 
 class Transition(object):

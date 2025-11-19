@@ -1,4 +1,4 @@
-from conllu_reader import ConlluReader
+from src.conllu.conllu_reader import ConlluReader
 import math
 
 class PostProcessor():

@@ -1,4 +1,4 @@
-from conllu_token import Token
+from src.conllu.conllu_token import Token
 import tensorflow as tf
 
 class ParserMLP:
