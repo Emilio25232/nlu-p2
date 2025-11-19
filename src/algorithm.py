@@ -1,4 +1,4 @@
-from state import State
+from src.state import State
 from src.conllu.conllu_token import Token
 
 
@@ -224,7 +224,26 @@ class ArcEager():
         Returns:
             bool: True if a LEFT-ARC transition is the correct action in the current state, False otherwise.
         """
-        raise NotImplementedError
+        # A LEFT-ARC is correct when:
+        # - It is structurally valid
+        # - In the gold tree, the buffer head is the head of the stack top
+        # - There is no token in the buffer whose gold head is the stack top
+        if not self.LA_is_valid(state):
+            return False
+
+        top_stack: Token = state.S[-1]
+        buffer_head: Token = state.B[0]
+
+        # Gold condition: buffer head is the head of stack top
+        if top_stack.head != buffer_head.id:
+            return False
+
+        # Do not remove a node that still has (gold) dependents in the buffer
+        for tok in state.B:
+            if tok.head == top_stack.id:
+                return False
+
+        return True
     
     def RA_is_correct(self, state: State) -> bool:
         """
@@ -239,7 +258,16 @@ class ArcEager():
         Returns:
             bool: True if a RIGHT-ARC transition is the correct action in the current state, False otherwise.
         """
-        raise NotImplementedError
+        # A RIGHT-ARC is correct when:
+        # - It is structurally valid
+        # - In the gold tree, the stack top is the head of the buffer head
+        if not self.RA_is_valid(state):
+            return False
+
+        top_stack: Token = state.S[-1]
+        buffer_head: Token = state.B[0]
+
+        return buffer_head.head == top_stack.id
 
     def RA_is_valid(self, state: State) -> bool:
         """
@@ -278,9 +306,18 @@ class ArcEager():
         Returns:
             bool: True if a REDUCE transition is the correct action in the current state, False otherwise.
         """
-        #It is correct to do if there is no word in the state buffer  (state.B) which head is 
-        #the word on the top of the stack (state.S[-1])
-        raise NotImplementedError
+        # It is correct to REDUCE when:
+        # - It is structurally valid (token on top of the stack already has a head)
+        # - There is no token in the buffer whose gold head is the stack-top token
+        if not self.REDUCE_is_valid(state):
+            return False
+
+        top_stack: Token = state.S[-1]
+        for tok in state.B:
+            if tok.head == top_stack.id:
+                return False
+
+        return True
 
     def REDUCE_is_valid(self, state: State) -> bool:
         """
@@ -325,17 +362,32 @@ class ArcEager():
             if self.LA_is_valid(state) and self.LA_is_correct(state):
                 #Add current state 'state' (the input) and the transition taken (the desired output) to the list of samples
                 #Update the state by applying the LA transition using the function apply_transition
-                raise NotImplementedError
+                # LEFT-ARC: buffer head is the head of stack top
+                top_stack: Token = state.S[-1]
+                buffer_head: Token = state.B[0]
+                # Gold label is the deprel of the dependent (stack top)
+                transition = Transition(self.LA, top_stack.dep)
+                # Store a copy of the current state and the chosen transition
+                samples.append(Sample(State(list(state.S), list(state.B), set(state.A)), transition))
+                # Update state
+                self.apply_transition(state, transition)
 
             elif self.RA_is_valid(state) and self.RA_is_correct(state):
                 #Add current state 'state' (the input) and the transition taken (the desired output) to the list of samples
                 #Update the state by applying the RA transition using the function apply_transition
-                raise NotImplementedError
+                # RIGHT-ARC: stack top is the head of buffer head
+                buffer_head: Token = state.B[0]
+                # Gold label is the deprel of the dependent (buffer head)
+                transition = Transition(self.RA, buffer_head.dep)
+                samples.append(Sample(State(list(state.S), list(state.B), set(state.A)), transition))
+                self.apply_transition(state, transition)
 
             elif self.REDUCE_is_valid(state) and self.REDUCE_is_correct(state):
                 #Add current state 'state' (the input) and the transition taken (the desired output) to the list of samples
                 #Update the state by applying the REDUCE transition using the function apply_transition
-                raise NotImplementedError
+                transition = Transition(self.REDUCE)
+                samples.append(Sample(State(list(state.S), list(state.B), set(state.A)), transition))
+                self.apply_transition(state, transition)
             else:
                 #If no other transiton can be applied, it's a SHIFT transition
                 transition = Transition(self.SHIFT)
