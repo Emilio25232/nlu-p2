@@ -198,7 +198,18 @@ class ArcEager():
         Returns:
             bool: True if a LEFT-ARC transition is valid in the current state, False otherwise.
         """
-        raise NotImplementedError
+        # Preconditions:
+        # 1. Stack is not empty
+        # 2. Top of stack is not ROOT (id 0)
+        # 3. Top of stack does not already have a head
+        if not state.S:
+            return False
+        s = state.S[-1]
+        if s.id == 0: # ROOT cannot be a dependent
+            return False
+        if self.has_head(s, state.A):
+            return False
+        return True
 
     def LA_is_correct(self, state: State) -> bool:
         """
@@ -213,7 +224,12 @@ class ArcEager():
         Returns:
             bool: True if a LEFT-ARC transition is the correct action in the current state, False otherwise.
         """
-        raise NotImplementedError
+        # Correct if there is a gold arc from Buffer[0] (head) to Stack[-1] (dependent)
+        if not state.S or not state.B:
+            return False
+        s = state.S[-1]
+        b = state.B[0]
+        return b.id == s.head
     
     def RA_is_correct(self, state: State) -> bool:
         """
@@ -228,7 +244,12 @@ class ArcEager():
         Returns:
             bool: True if a RIGHT-ARC transition is the correct action in the current state, False otherwise.
         """
-        raise NotImplementedError
+        # Correct if there is a gold arc from Stack[-1] (head) to Buffer[0] (dependent)
+        if not state.S or not state.B:
+            return False
+        s = state.S[-1]
+        b = state.B[0]
+        return s.id == b.head
 
     def RA_is_valid(self, state: State) -> bool:
         """
@@ -244,7 +265,10 @@ class ArcEager():
         Returns:
             bool: True if a RIGHT-ARC transition can be validly applied in the current state, False otherwise.
         """
-        raise NotImplementedError
+        # Preconditions:
+        # 1. Stack is not empty
+        # 2. Buffer is not empty
+        return bool(state.S) and bool(state.B)
 
     def REDUCE_is_correct(self, state: State) -> bool:
         """
@@ -265,7 +289,15 @@ class ArcEager():
         """
         #It is correct to do if there is no word in the state buffer  (state.B) which head is 
         #the word on the top of the stack (state.S[-1])
-        raise NotImplementedError
+        if not state.S:
+            return False
+        s = state.S[-1]
+        
+        # Check if any token in the buffer has 's' as its head
+        for token in state.B:
+            if token.head == s.id:
+                return False
+        return True
 
     def REDUCE_is_valid(self, state: State) -> bool:
         """
@@ -281,7 +313,13 @@ class ArcEager():
         Returns:
             bool: True if a REDUCE transition is valid in the current state, False otherwise.
         """
-        raise NotImplementedError
+        # Preconditions:
+        # 1. Stack is not empty
+        # 2. Top of stack has a head (is already a dependent)
+        if not state.S:
+            return False
+        s = state.S[-1]
+        return self.has_head(s, state.A)
 
     def oracle(self, sent: list['Token']) -> list['Sample']:
         """
@@ -303,38 +341,51 @@ class ArcEager():
         """
 
         state = self.create_initial_state(sent) 
-
         samples = [] #Store here all training samples for sent
+        
+        # Pre-compute gold arcs for assertion at the end
+        gold_arcs_set = self.gold_arcs(sent)
 
         #Applies the transition system until a final configuration state is reached
         while not self.final_state(state):
             
+            # Create a snapshot of the state for the sample
+            current_state_snapshot = State(list(state.S), list(state.B), set(state.A))
+
             if self.LA_is_valid(state) and self.LA_is_correct(state):
                 #Add current state 'state' (the input) and the transition taken (the desired output) to the list of samples
                 #Update the state by applying the LA transition using the function apply_transition
-                raise NotImplementedError
+                dep_label = state.S[-1].dep
+                transition = Transition(self.LA, dep_label)
+                samples.append(Sample(current_state_snapshot, transition))
+                self.apply_transition(state, transition)
 
             elif self.RA_is_valid(state) and self.RA_is_correct(state):
                 #Add current state 'state' (the input) and the transition taken (the desired output) to the list of samples
                 #Update the state by applying the RA transition using the function apply_transition
-                raise NotImplementedError
+                dep_label = state.B[0].dep
+                transition = Transition(self.RA, dep_label)
+                samples.append(Sample(current_state_snapshot, transition))
+                self.apply_transition(state, transition)
 
             elif self.REDUCE_is_valid(state) and self.REDUCE_is_correct(state):
                 #Add current state 'state' (the input) and the transition taken (the desired output) to the list of samples
                 #Update the state by applying the REDUCE transition using the function apply_transition
-                raise NotImplementedError
+                transition = Transition(self.REDUCE)
+                samples.append(Sample(current_state_snapshot, transition))
+                self.apply_transition(state, transition)
             else:
                 #If no other transiton can be applied, it's a SHIFT transition
                 transition = Transition(self.SHIFT)
                 #Add current state 'state' (the input) and the transition taken (the desired output) to the list of samples
-                samples.append(Sample(state, transition))
+                samples.append(Sample(current_state_snapshot, transition))
                 #Update the state by applying the SHIFT transition using the function apply_transition
                 self.apply_transition(state,transition)
 
 
         #When the oracle ends, the generated arcs must
         #match exactly the gold arcs, otherwise the obtained sequence of transitions is not correct
-        assert self.gold_arcs(sent) == state.A, f"Gold arcs {self.gold_arcs(sent)} and generated arcs {state.A} do not match"
+        assert gold_arcs_set == state.A, f"Gold arcs {gold_arcs_set} and generated arcs {state.A} do not match"
     
         return samples   
 
@@ -504,3 +555,17 @@ if __name__ == "__main__":
 
     # To display the created Sample instance
     print("Sample:\n", sample_instance)
+
+    print()
+    print("**************************************************")
+    print("*     Testing Oracle                             *")
+    print("**************************************************")
+    
+    print("Running oracle on the example sentence...")
+    samples = arc_eager.oracle(tree)
+    print(f"Generated {len(samples)} samples.")
+    for i, sample in enumerate(samples):
+        print(f"Step {i+1}: {sample.transition}")
+        # print(sample.state) # Optional: print state to debug
+    
+    print("\nOracle test passed!")
