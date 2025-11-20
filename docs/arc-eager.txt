@@ -1,0 +1,32 @@
+ARC-EAGER Definitions
+
+LEFT_ARC(l)
+Preconditions:
+  stack top = i ≠ 0
+  i does NOT have a head already
+Effect:
+  Add arc (j, l, i)
+  Pop i from stack
+
+
+RIGHT_ARC(l)
+Preconditions:
+  buffer head = j
+  j does NOT have a head already
+Effect:
+  Add arc (i, l, j)
+  Push j to stack
+  Remove j from buffer
+
+
+REDUCE
+Preconditions:
+  stack top i already HAS a head
+Effect:
+  Pop i from stack
+
+
+SHIFT
+Take buffer head j:
+  push j onto stack
+  remove j from buffer

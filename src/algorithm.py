@@ -1,4 +1,4 @@
-from state import State
+from src.state import State
 from src.conllu.conllu_token import Token
 
 
@@ -187,29 +187,29 @@ class ArcEager():
 
     def LA_is_valid(self, state: State) -> bool:
         """
-        Determines if a LEFT-ARC (LA) transition is valid for the current parsing state.
-
-        A LEFT-ARC transition is valid if certain preconditions are met in the parser's state.
-        This typically involves checking the current state of the stack and buffer in the parser.
-
-        Parameters:
-            state (State): The current state of the parser, including the stack and buffer.
-
-        Returns:
-            bool: True if a LEFT-ARC transition is valid in the current state, False otherwise.
+        LEFT-ARC is valid iff:
+        - Stack is non-empty
+        - Buffer is non-empty
+        - Top of stack is not ROOT
+        - Top of stack does NOT already have a head
         """
-        # Preconditions:
-        # 1. Stack is not empty
-        # 2. Top of stack is not ROOT (id 0)
-        # 3. Top of stack does not already have a head
         if not state.S:
             return False
-        s = state.S[-1]
-        if s.id == 0: # ROOT cannot be a dependent
+        if not state.B:
             return False
+
+        s = state.S[-1]
+
+        # Do not attach ROOT as dependent
+        if s.id == 0:
+            return False
+
+        # Ensure single-head constraint
         if self.has_head(s, state.A):
             return False
+
         return True
+
 
     def LA_is_correct(self, state: State) -> bool:
         """
@@ -224,12 +224,26 @@ class ArcEager():
         Returns:
             bool: True if a LEFT-ARC transition is the correct action in the current state, False otherwise.
         """
-        # Correct if there is a gold arc from Buffer[0] (head) to Stack[-1] (dependent)
-        if not state.S or not state.B:
+        # A LEFT-ARC is correct when:
+        # - It is structurally valid
+        # - In the gold tree, the buffer head is the head of the stack top
+        # - There is no token in the buffer whose gold head is the stack top
+        if not self.LA_is_valid(state):
             return False
-        s = state.S[-1]
-        b = state.B[0]
-        return b.id == s.head
+
+        top_stack: Token = state.S[-1]
+        buffer_head: Token = state.B[0]
+
+        # Gold condition: buffer head is the head of stack top
+        if top_stack.head != buffer_head.id:
+            return False
+
+        # Do not remove a node that still has (gold) dependents in the buffer
+        for tok in state.B:
+            if tok.head == top_stack.id:
+                return False
+
+        return True
     
     def RA_is_correct(self, state: State) -> bool:
         """
@@ -244,31 +258,36 @@ class ArcEager():
         Returns:
             bool: True if a RIGHT-ARC transition is the correct action in the current state, False otherwise.
         """
-        # Correct if there is a gold arc from Stack[-1] (head) to Buffer[0] (dependent)
-        if not state.S or not state.B:
+        # A RIGHT-ARC is correct when:
+        # - It is structurally valid
+        # - In the gold tree, the stack top is the head of the buffer head
+        if not self.RA_is_valid(state):
             return False
-        s = state.S[-1]
-        b = state.B[0]
-        return s.id == b.head
+
+        top_stack: Token = state.S[-1]
+        buffer_head: Token = state.B[0]
+
+        return buffer_head.head == top_stack.id
 
     def RA_is_valid(self, state: State) -> bool:
         """
-        Checks the preconditions in order to apply a right-arc (RA) transition.
-
-        A RIGHT-ARC transition is valid under certain conditions related to the state of the stack
-        and buffer in the parser. This method evaluates these conditions to determine if a RIGHT-ARC
-        can be applied.
-
-        Parameters:
-            state (State): The current parsing state of the parser.
-
-        Returns:
-            bool: True if a RIGHT-ARC transition can be validly applied in the current state, False otherwise.
+        RIGHT-ARC is valid iff:
+        - Stack is non-empty
+        - Buffer is non-empty
+        - Buffer head does NOT already have a head
         """
-        # Preconditions:
-        # 1. Stack is not empty
-        # 2. Buffer is not empty
-        return bool(state.S) and bool(state.B)
+        if not state.S:
+            return False
+        if not state.B:
+            return False
+
+        b = state.B[0]
+
+        # Ensure single-head constraint for buffer head
+        if self.has_head(b, state.A):
+            return False
+
+        return True
 
     def REDUCE_is_correct(self, state: State) -> bool:
         """
@@ -287,38 +306,31 @@ class ArcEager():
         Returns:
             bool: True if a REDUCE transition is the correct action in the current state, False otherwise.
         """
-        #It is correct to do if there is no word in the state buffer  (state.B) which head is 
-        #the word on the top of the stack (state.S[-1])
-        if not state.S:
+        # It is correct to REDUCE when:
+        # - It is structurally valid (token on top of the stack already has a head)
+        # - There is no token in the buffer whose gold head is the stack-top token
+        if not self.REDUCE_is_valid(state):
             return False
-        s = state.S[-1]
-        
-        # Check if any token in the buffer has 's' as its head
-        for token in state.B:
-            if token.head == s.id:
+
+        top_stack: Token = state.S[-1]
+        for tok in state.B:
+            if tok.head == top_stack.id:
                 return False
+
         return True
 
     def REDUCE_is_valid(self, state: State) -> bool:
         """
-        Determines if a REDUCE transition is valid for the current parsing state.
-
-        This method checks if the preconditions for applying a REDUCE transition are met in 
-        the current state of the parser. This typically involves assessing the state of the 
-        stack and buffer.
-
-        Parameters:
-            state (State): The current state of the parser, including the stack and buffer.
-
-        Returns:
-            bool: True if a REDUCE transition is valid in the current state, False otherwise.
+        REDUCE is valid iff:
+        - Stack is non-empty
+        - Top of stack already has a head
         """
-        # Preconditions:
-        # 1. Stack is not empty
-        # 2. Top of stack has a head (is already a dependent)
         if not state.S:
             return False
+
         s = state.S[-1]
+
+        # Only reduce if token already has a head
         return self.has_head(s, state.A)
 
     def oracle(self, sent: list['Token']) -> list['Sample']:
@@ -355,24 +367,31 @@ class ArcEager():
             if self.LA_is_valid(state) and self.LA_is_correct(state):
                 #Add current state 'state' (the input) and the transition taken (the desired output) to the list of samples
                 #Update the state by applying the LA transition using the function apply_transition
-                dep_label = state.S[-1].dep
-                transition = Transition(self.LA, dep_label)
-                samples.append(Sample(current_state_snapshot, transition))
+                # LEFT-ARC: buffer head is the head of stack top
+                top_stack: Token = state.S[-1]
+                buffer_head: Token = state.B[0]
+                # Gold label is the deprel of the dependent (stack top)
+                transition = Transition(self.LA, top_stack.dep)
+                # Store a copy of the current state and the chosen transition
+                samples.append(Sample(State(list(state.S), list(state.B), set(state.A)), transition))
+                # Update state
                 self.apply_transition(state, transition)
 
             elif self.RA_is_valid(state) and self.RA_is_correct(state):
                 #Add current state 'state' (the input) and the transition taken (the desired output) to the list of samples
                 #Update the state by applying the RA transition using the function apply_transition
-                dep_label = state.B[0].dep
-                transition = Transition(self.RA, dep_label)
-                samples.append(Sample(current_state_snapshot, transition))
+                # RIGHT-ARC: stack top is the head of buffer head
+                buffer_head: Token = state.B[0]
+                # Gold label is the deprel of the dependent (buffer head)
+                transition = Transition(self.RA, buffer_head.dep)
+                samples.append(Sample(State(list(state.S), list(state.B), set(state.A)), transition))
                 self.apply_transition(state, transition)
 
             elif self.REDUCE_is_valid(state) and self.REDUCE_is_correct(state):
                 #Add current state 'state' (the input) and the transition taken (the desired output) to the list of samples
                 #Update the state by applying the REDUCE transition using the function apply_transition
                 transition = Transition(self.REDUCE)
-                samples.append(Sample(current_state_snapshot, transition))
+                samples.append(Sample(State(list(state.S), list(state.B), set(state.A)), transition))
                 self.apply_transition(state, transition)
             else:
                 #If no other transiton can be applied, it's a SHIFT transition
