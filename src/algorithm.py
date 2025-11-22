@@ -353,12 +353,17 @@ class ArcEager():
         """
 
         state = self.create_initial_state(sent) 
-
         samples = [] #Store here all training samples for sent
+        
+        # Pre-compute gold arcs for assertion at the end
+        gold_arcs_set = self.gold_arcs(sent)
 
         #Applies the transition system until a final configuration state is reached
         while not self.final_state(state):
             
+            # Create a snapshot of the state for the sample
+            current_state_snapshot = State(list(state.S), list(state.B), set(state.A))
+
             if self.LA_is_valid(state) and self.LA_is_correct(state):
                 #Add current state 'state' (the input) and the transition taken (the desired output) to the list of samples
                 #Update the state by applying the LA transition using the function apply_transition
@@ -392,14 +397,14 @@ class ArcEager():
                 #If no other transiton can be applied, it's a SHIFT transition
                 transition = Transition(self.SHIFT)
                 #Add current state 'state' (the input) and the transition taken (the desired output) to the list of samples
-                samples.append(Sample(state, transition))
+                samples.append(Sample(current_state_snapshot, transition))
                 #Update the state by applying the SHIFT transition using the function apply_transition
                 self.apply_transition(state,transition)
 
 
         #When the oracle ends, the generated arcs must
         #match exactly the gold arcs, otherwise the obtained sequence of transitions is not correct
-        assert self.gold_arcs(sent) == state.A, f"Gold arcs {self.gold_arcs(sent)} and generated arcs {state.A} do not match"
+        assert gold_arcs_set == state.A, f"Gold arcs {gold_arcs_set} and generated arcs {state.A} do not match"
     
         return samples   
 
@@ -569,3 +574,17 @@ if __name__ == "__main__":
 
     # To display the created Sample instance
     print("Sample:\n", sample_instance)
+
+    print()
+    print("**************************************************")
+    print("*     Testing Oracle                             *")
+    print("**************************************************")
+    
+    print("Running oracle on the example sentence...")
+    samples = arc_eager.oracle(tree)
+    print(f"Generated {len(samples)} samples.")
+    for i, sample in enumerate(samples):
+        print(f"Step {i+1}: {sample.transition}")
+        # print(sample.state) # Optional: print state to debug
+    
+    print("\nOracle test passed!")
