@@ -115,7 +115,44 @@ class Sample(object):
 
                 Output: ['ROOT', 'Distribution', 'license', 'does', 'ROOT_UPOS', 'NOUN', 'NOUN', 'AUX']
         """
-        raise NotImplementedError
+        pad_token = "<PAD>"
+
+        # 1. Extract Stack Features (Top 'n' elements)
+        # We need the list elements from deep to top (e.g., [ROOT, Word]).
+        # If the stack is shorter than n, we pad on the LEFT.
+        if nstack_feats > 0 and len(self._state.S) > 0:
+            stack_elements = self._state.S[-nstack_feats:]
+        else:
+            stack_elements = []
+        
+        missing_stack = nstack_feats - len(stack_elements)
+
+        # 2. Extract Buffer Features (First 'm' elements)
+        # We need the first elements of the buffer.
+        # If the buffer is shorter than m, we pad on the RIGHT.
+        buffer_elements = self._state.B[:nbuffer_feats]
+        missing_buffer = nbuffer_feats - len(buffer_elements)
+
+        # 3. Build Word Features List
+        word_feats = []
+        # Stack Words: Pad first, then actual words (matches Example 1: ['<PAD>', 'ROOT'])
+        word_feats.extend([pad_token] * missing_stack)
+        word_feats.extend([token.form for token in stack_elements])
+        # Buffer Words: Actual words, then Pad
+        word_feats.extend([token.form for token in buffer_elements])
+        word_feats.extend([pad_token] * missing_buffer)
+
+        # 4. Build UPOS Features List
+        pos_feats = []
+        # Stack UPOS: Pad first, then actual tags
+        pos_feats.extend([pad_token] * missing_stack)
+        pos_feats.extend([token.upos for token in stack_elements])
+        # Buffer UPOS: Actual tags, then Pad
+        pos_feats.extend([token.upos for token in buffer_elements])
+        pos_feats.extend([pad_token] * missing_buffer)
+
+        # 5. Combine: [Words + POS]
+        return word_feats + pos_feats
     
 
     def __str__(self):
