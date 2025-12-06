@@ -236,6 +236,70 @@ class ParserMLP:
         
         return results
     
+    def predict_and_evaluate(self, X_words, X_pos, y_action, y_deprel):
+        """
+        Get predictions and compute detailed evaluation metrics.
+        
+        Parameters:
+            X_words: Word features (numpy array).
+            X_pos: POS features (numpy array).
+            y_action: True action labels (numpy array).
+            y_deprel: True deprel labels (numpy array).
+        
+        Returns:
+            Dictionary with evaluation metrics including:
+            - transition_accuracy: Accuracy of action predictions
+            - deprel_accuracy: Accuracy of deprel predictions (on arc actions)
+            - joint_accuracy: Joint accuracy of both
+        """
+        if self.model is None:
+            raise ValueError("Model not built or trained.")
+        
+        # Get predictions
+        predictions = self.model.predict(
+            [X_words, X_pos],
+            batch_size=self.batch_size,
+            verbose=0
+        )
+        
+        # predictions is a list: [action_probs, deprel_probs]
+        action_probs, deprel_probs = predictions
+        
+        # Get predicted labels
+        y_pred_action = np.argmax(action_probs, axis=-1)
+        y_pred_deprel = np.argmax(deprel_probs, axis=-1)
+        
+        # Compute transition accuracy
+        action_correct = (y_action == y_pred_action)
+        transition_accuracy = np.mean(action_correct)
+        
+        # Compute deprel accuracy only on arc-creating actions
+        arc_mask = (y_deprel >= 0)
+        num_arc_samples = np.sum(arc_mask)
+        
+        if num_arc_samples > 0:
+            deprel_correct = (y_deprel[arc_mask] == y_pred_deprel[arc_mask])
+            deprel_accuracy = np.mean(deprel_correct)
+            
+            # Joint accuracy
+            joint_correct = action_correct[arc_mask] & deprel_correct
+            joint_accuracy = np.mean(joint_correct)
+        else:
+            deprel_accuracy = 0.0
+            joint_accuracy = 0.0
+        
+        return {
+            'transition_accuracy': float(transition_accuracy),
+            'deprel_accuracy': float(deprel_accuracy),
+            'joint_accuracy': float(joint_accuracy),
+            'total_samples': len(y_action),
+            'arc_samples': int(num_arc_samples),
+            'predictions': {
+                'actions': y_pred_action,
+                'deprels': y_pred_deprel
+            }
+        }
+    
     def run(self, sents: list[list['Token']], arc_eager, form2id, upos2id, id2action, id2deprel, 
             nbuffer_feats: int = 2, nstack_feats: int = 2):
         """
