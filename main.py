@@ -66,46 +66,111 @@ X_dev_words, X_dev_pos, y_dev_action, y_dev_deprel = samples_to_arrays(
 # 3. Conduct inference on the test set with the trained model.
 # 4. Save the parsing results of the test set in CoNLLU format for further analysis.
 
-# Example usage of the ParserMLP model:
-# Uncomment the following lines to train and use the model
+print("\n" + "="*60)
+print("TRAINING THE MLP DEPENDENCY PARSER")
+print("="*60)
 
-# from src.model import ParserMLP
-# 
-# # Create the model with vocabulary sizes
-# model = ParserMLP(
-#     word_emb_dim=100,
-#     pos_emb_dim=25,
-#     hidden_dim=64,
-#     epochs=10,
-#     batch_size=64,
-#     vocab_size_form=len(form2id),
-#     vocab_size_upos=len(upos2id),
-#     n_actions=len(action2id),
-#     n_deprels=len(deprel2id),
-#     n_word_feats=4,
-#     n_pos_feats=4
-# )
-# 
-# # Train the model
-# print("Training the model...")
-# history = model.train(
-#     X_train_words, X_train_pos, y_train_action, y_train_deprel,
-#     X_dev_words, X_dev_pos, y_dev_action, y_dev_deprel
-# )
-# 
-# # Evaluate the model
-# print("\nEvaluating the model on dev set...")
-# results = model.evaluate(X_dev_words, X_dev_pos, y_dev_action, y_dev_deprel)
-# 
-# # Run inference on test set
-# print("\nRunning inference on test set...")
-# parsed_trees = model.run(
-#     test_trees, arc_eager, form2id, upos2id, id2action, id2deprel,
-#     nbuffer_feats=2, nstack_feats=2
-# )
-# 
-# # Save results to CoNLLU format (you'll need to implement a writer function)
-# # writer.write_conllu_file(parsed_trees, "output.conllu")
+from src.model import ParserMLP
+import pickle
+import os
+
+# Print dataset statistics
+print(f"\n📊 Dataset Statistics:")
+print(f"   Training samples: {len(train_samples):,}")
+print(f"   Dev samples: {len(dev_samples):,}")
+print(f"   Vocabulary sizes:")
+print(f"      - Forms (words): {len(form2id):,}")
+print(f"      - UPOS tags: {len(upos2id):,}")
+print(f"      - Dependency relations: {len(deprel2id):,}")
+print(f"      - Actions: {len(action2id)}")
+
+# Create the model with vocabulary sizes
+print(f"\n🔧 Building the MLP model...")
+model = ParserMLP(
+    word_emb_dim=100,
+    pos_emb_dim=25,
+    hidden_dim=64,
+    epochs=10,
+    batch_size=64,
+    vocab_size_form=len(form2id),
+    vocab_size_upos=len(upos2id),
+    n_actions=len(action2id),
+    n_deprels=len(deprel2id),
+    n_word_feats=4,
+    n_pos_feats=4
+)
+
+print(f"   Model architecture:")
+print(f"      - Word embedding dim: 100")
+print(f"      - POS embedding dim: 25")
+print(f"      - Hidden layer dim: 64")
+print(f"      - Output actions: {len(action2id)}")
+print(f"      - Output deprels: {len(deprel2id)}")
+
+# Print model summary
+print(f"\n📋 Model Summary:")
+model.model.summary()
+
+# Train the model
+print(f"\n🏋️  Training the model...")
+print(f"   Epochs: {model.epochs}")
+print(f"   Batch size: {model.batch_size}")
+print(f"\n" + "-"*60)
+
+history = model.train(
+    X_train_words, X_train_pos, y_train_action, y_train_deprel,
+    X_dev_words, X_dev_pos, y_dev_action, y_dev_deprel
+)
+
+print("-"*60)
+print("\n✅ Training completed!")
+
+# Print training results
+print(f"\n📈 Training Results:")
+print(f"   Final training action accuracy: {history.history['output_action_accuracy'][-1]:.4f}")
+print(f"   Final training deprel accuracy: {history.history['output_deprel_accuracy'][-1]:.4f}")
+print(f"   Final validation action accuracy: {history.history['val_output_action_accuracy'][-1]:.4f}")
+print(f"   Final validation deprel accuracy: {history.history['val_output_deprel_accuracy'][-1]:.4f}")
+
+# Evaluate the model on dev set
+print(f"\n🔍 Evaluating the model on dev set...")
+results = model.evaluate(X_dev_words, X_dev_pos, y_dev_action, y_dev_deprel)
+
+print(f"\n📊 Dev Set Evaluation:")
+print(f"   Action accuracy: {results[3]:.4f}")
+print(f"   Deprel accuracy: {results[4]:.4f}")
+
+# Save trained weights and dictionaries
+print(f"\n💾 Saving model, weights, and vocabularies...")
+from src.model_utils import save_model
+
+dictionaries = {
+    'form2id': form2id,
+    'id2form': id2form,
+    'upos2id': upos2id,
+    'id2upos': id2upos,
+    'deprel2id': deprel2id,
+    'id2deprel': id2deprel,
+    'action2id': action2id,
+    'id2action': id2action
+}
+
+save_model(model, dictionaries)
+
+print(f"\n" + "="*60)
+print("✨ TRAINING COMPLETE!")
+print("="*60)
+
+# Run inference on test set
+print(f"\n🚀 Running inference on test set...")
+parsed_trees = model.run(
+    test_trees, arc_eager, form2id, upos2id, id2action, id2deprel,
+    nbuffer_feats=2, nstack_feats=2
+)
+print(f"   ✓ Parsed {len(parsed_trees)} test sentences")
+
+# Save results to CoNLLU format (you'll need to implement a writer function)
+# writer.write_conllu_file(parsed_trees, "output.conllu")
 
 # TODO: Utilize the 'postprocessor' module (already implemented).
 # 1. Read the output saved in the CoNLLU file and address any issues with ill-formed trees.
