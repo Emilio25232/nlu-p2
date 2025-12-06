@@ -66,6 +66,47 @@ X_dev_words, X_dev_pos, y_dev_action, y_dev_deprel = samples_to_arrays(
 # 3. Conduct inference on the test set with the trained model.
 # 4. Save the parsing results of the test set in CoNLLU format for further analysis.
 
+# Example usage of the ParserMLP model:
+# Uncomment the following lines to train and use the model
+
+# from src.model import ParserMLP
+# 
+# # Create the model with vocabulary sizes
+# model = ParserMLP(
+#     word_emb_dim=100,
+#     pos_emb_dim=25,
+#     hidden_dim=64,
+#     epochs=10,
+#     batch_size=64,
+#     vocab_size_form=len(form2id),
+#     vocab_size_upos=len(upos2id),
+#     n_actions=len(action2id),
+#     n_deprels=len(deprel2id),
+#     n_word_feats=4,
+#     n_pos_feats=4
+# )
+# 
+# # Train the model
+# print("Training the model...")
+# history = model.train(
+#     X_train_words, X_train_pos, y_train_action, y_train_deprel,
+#     X_dev_words, X_dev_pos, y_dev_action, y_dev_deprel
+# )
+# 
+# # Evaluate the model
+# print("\nEvaluating the model on dev set...")
+# results = model.evaluate(X_dev_words, X_dev_pos, y_dev_action, y_dev_deprel)
+# 
+# # Run inference on test set
+# print("\nRunning inference on test set...")
+# parsed_trees = model.run(
+#     test_trees, arc_eager, form2id, upos2id, id2action, id2deprel,
+#     nbuffer_feats=2, nstack_feats=2
+# )
+# 
+# # Save results to CoNLLU format (you'll need to implement a writer function)
+# # writer.write_conllu_file(parsed_trees, "output.conllu")
+
 # TODO: Utilize the 'postprocessor' module (already implemented).
 # 1. Read the output saved in the CoNLLU file and address any issues with ill-formed trees.
 # 2. Specify the file path: path = "<YOUR_PATH_TO_OUTPUT_FILE>"
