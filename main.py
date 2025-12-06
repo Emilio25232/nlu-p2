@@ -132,13 +132,16 @@ print(f"   Final training deprel accuracy: {history.history['output_deprel_accur
 print(f"   Final validation action accuracy: {history.history['val_output_action_accuracy'][-1]:.4f}")
 print(f"   Final validation deprel accuracy: {history.history['val_output_deprel_accuracy'][-1]:.4f}")
 
-# Evaluate the model on dev set
+# Evaluate the model on dev set with detailed metrics
 print(f"\n🔍 Evaluating the model on dev set...")
-results = model.evaluate(X_dev_words, X_dev_pos, y_dev_action, y_dev_deprel)
+from src.evaluator import evaluate_model_on_dev, print_evaluation_metrics
 
-print(f"\n📊 Dev Set Evaluation:")
-print(f"   Action accuracy: {results[3]:.4f}")
-print(f"   Deprel accuracy: {results[4]:.4f}")
+dev_metrics = evaluate_model_on_dev(
+    model, X_dev_words, X_dev_pos, y_dev_action, y_dev_deprel,
+    batch_size=model.batch_size
+)
+
+print_evaluation_metrics(dev_metrics, dataset_name="Development")
 
 # Save trained weights and dictionaries
 print(f"\n💾 Saving model, weights, and vocabularies...")
