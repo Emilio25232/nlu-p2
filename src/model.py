@@ -157,21 +157,38 @@ class ParserMLP:
         if self.model is None:
             raise ValueError("Model not built. Please initialize with vocabulary sizes.")
         
-        # Filter out samples where deprel is -1 (for SHIFT/REDUCE actions)
-        # For training, we'll mask these with a special handling
-        # We'll use label -1 and then ignore it in loss calculation
-        # Actually, sparse_categorical_crossentropy handles this if we mask properly
+        # Handle -1 labels for deprel (SHIFT/REDUCE actions don't have deprel)
+        # Create sample weights: 1.0 for valid deprel labels, 0.0 for -1 labels
+        train_deprel_weights = (y_train_deprel >= 0).astype(np.float32)
+        dev_deprel_weights = (y_dev_deprel >= 0).astype(np.float32)
+        
+        # Replace -1 with 0 to avoid errors (these will be ignored by sample_weight)
+        y_train_deprel_masked = np.where(y_train_deprel >= 0, y_train_deprel, 0)
+        y_dev_deprel_masked = np.where(y_dev_deprel >= 0, y_dev_deprel, 0)
+        
+        # Sample weights as list (matching the y output order: [action, deprel])
+        train_sample_weights = [
+            np.ones_like(y_train_action, dtype=np.float32),  # weights for action output
+            train_deprel_weights  # weights for deprel output
+        ]
+        
+        dev_sample_weights = [
+            np.ones_like(y_dev_action, dtype=np.float32),  # weights for action output
+            dev_deprel_weights  # weights for deprel output
+        ]
         
         # Prepare validation data
         validation_data = (
             [X_dev_words, X_dev_pos],
-            [y_dev_action, y_dev_deprel]
+            [y_dev_action, y_dev_deprel_masked],
+            dev_sample_weights
         )
         
         # Train the model
         history = self.model.fit(
             [X_train_words, X_train_pos],
-            [y_train_action, y_train_deprel],
+            [y_train_action, y_train_deprel_masked],
+            sample_weight=train_sample_weights,
             epochs=self.epochs,
             batch_size=self.batch_size,
             validation_data=validation_data,
@@ -199,9 +216,20 @@ class ParserMLP:
         if self.model is None:
             raise ValueError("Model not built or trained.")
         
+        # Handle -1 labels for deprel (SHIFT/REDUCE actions don't have deprel)
+        deprel_weights = (y_deprel >= 0).astype(np.float32)
+        y_deprel_masked = np.where(y_deprel >= 0, y_deprel, 0)
+        
+        # Sample weights as list (matching the y output order: [action, deprel])
+        sample_weights = [
+            np.ones_like(y_action, dtype=np.float32),  # weights for action output
+            deprel_weights  # weights for deprel output
+        ]
+        
         results = self.model.evaluate(
             [X_words, X_pos],
-            [y_action, y_deprel],
+            [y_action, y_deprel_masked],
+            sample_weight=sample_weights,
             batch_size=self.batch_size,
             verbose=1
         )
