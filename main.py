@@ -7,6 +7,7 @@ from src.vocab import (
     build_action_only_vocab,
 )
 from src.preprocessor import samples_to_arrays
+from src.postprocessor import PostProcessor
 
 
 def read_file(reader, path, inference):
@@ -62,10 +63,10 @@ X_dev_words, X_dev_pos, y_dev_action, y_dev_deprel = samples_to_arrays(
 # DONE This function should convert the current parser state into a list of features for use by the neural model classifier.
 
 # TODO: Define and implement the neural model in the 'model.py' module.
-# 1. Train the model on the generated training dataset.
-# 2. Evaluate the model's performance using the development dataset.
-# 3. Conduct inference on the test set with the trained model.
-# 4. Save the parsing results of the test set in CoNLLU format for further analysis.
+# DONE: 1. Train the model on the generated training dataset.
+# DONE: 2. Evaluate the model's performance using the development dataset.
+# DONE: 3. Conduct inference on the test set with the trained model.
+# DONE: 4. Save the parsing results of the test set in CoNLLU format for further analysis.
 
 print("\n" + "="*60)
 print("TRAINING THE MLP DEPENDENCY PARSER")
@@ -179,3 +180,13 @@ print(f' Predicted trees written to "{output_path}"')
 # 2. Specify the file path: path = "<YOUR_PATH_TO_OUTPUT_FILE>"
 # 3. Process the file: trees = postprocessor.postprocess(path)
 # 4. Save the processed trees to a new output file.
+
+postprocessor = PostProcessor()
+
+# Run post-processing on the predicted CoNLL-U file
+cleaned_trees = postprocessor.postprocess(output_path)
+
+# Save cleaned trees to a new CoNLL-U file
+cleaned_output_path = "data/output_clean.conllu"
+reader.write_conllu_file(cleaned_output_path, cleaned_trees)
+print(f' Cleaned trees written to "{cleaned_output_path}"')
