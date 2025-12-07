@@ -1,6 +1,7 @@
 
 from src.conllu.conllu_reader import ConlluReader
 from src.algorithm import ArcEager
+from src.model import ParserMLP
 from src.vocab import (
     build_form_upos_deprel_vocabs,
     build_action_only_vocab,
@@ -70,12 +71,8 @@ print("\n" + "="*60)
 print("TRAINING THE MLP DEPENDENCY PARSER")
 print("="*60)
 
-from src.model import ParserMLP
-import pickle
-import os
-
 # Print dataset statistics
-print(f"\n📊 Dataset Statistics:")
+print(f"\n Dataset Statistics:")
 print(f"   Training samples: {len(train_samples):,}")
 print(f"   Dev samples: {len(dev_samples):,}")
 print(f"   Vocabulary sizes:")
@@ -108,11 +105,11 @@ print(f"      - Output actions: {len(action2id)}")
 print(f"      - Output deprels: {len(deprel2id)}")
 
 # Print model summary
-print(f"\n📋 Model Summary:")
+print(f"\n Model Summary:")
 model.model.summary()
 
 # Train the model
-print(f"\n🏋️  Training the model...")
+print(f"\n Training the model...")
 print(f"   Epochs: {model.epochs}")
 print(f"   Batch size: {model.batch_size}")
 print(f"\n" + "-"*60)
@@ -123,17 +120,17 @@ history = model.train(
 )
 
 print("-"*60)
-print("\n✅ Training completed!")
+print("\n Training completed!")
 
 # Print training results
-print(f"\n📈 Training Results:")
+print(f"\n Training Results:")
 print(f"   Final training action accuracy: {history.history['output_action_accuracy'][-1]:.4f}")
 print(f"   Final training deprel accuracy: {history.history['output_deprel_accuracy'][-1]:.4f}")
 print(f"   Final validation action accuracy: {history.history['val_output_action_accuracy'][-1]:.4f}")
 print(f"   Final validation deprel accuracy: {history.history['val_output_deprel_accuracy'][-1]:.4f}")
 
 # Evaluate the model on dev set with detailed metrics
-print(f"\n🔍 Evaluating the model on dev set...")
+print(f"\n Evaluating the model on dev set...")
 from src.evaluator import evaluate_model_on_dev, print_evaluation_metrics
 
 dev_metrics = evaluate_model_on_dev(
@@ -144,7 +141,7 @@ dev_metrics = evaluate_model_on_dev(
 print_evaluation_metrics(dev_metrics, dataset_name="Development")
 
 # Save trained weights and dictionaries
-print(f"\n💾 Saving model, weights, and vocabularies...")
+print(f"\n Saving model, weights, and vocabularies...")
 from src.model_utils import save_model
 
 dictionaries = {
@@ -161,16 +158,16 @@ dictionaries = {
 save_model(model, dictionaries)
 
 print(f"\n" + "="*60)
-print("✨ TRAINING COMPLETE!")
+print(" TRAINING COMPLETE!")
 print("="*60)
 
 # Run inference on test set
-print(f"\n🚀 Running inference on test set...")
+print(f"\n Running inference on test set...")
 parsed_trees = model.run(
     test_trees, arc_eager, form2id, upos2id, id2action, id2deprel,
     nbuffer_feats=2, nstack_feats=2
 )
-print(f"   ✓ Parsed {len(parsed_trees)} test sentences")
+print(f" Parsed {len(parsed_trees)} test sentences")
 
 # Save results to CoNLLU format (you'll need to implement a writer function)
 # writer.write_conllu_file(parsed_trees, "output.conllu")

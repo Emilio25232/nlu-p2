@@ -20,7 +20,7 @@ def main():
     print("="*60)
     
     # Load trained model and dictionaries
-    print("\n📦 Loading model from disk...")
+    print("\n Loading model from disk...")
     model, dictionaries = load_model(
         weights_path="models/parser_mlp_weights.h5",
         config_path="models/model_config.pkl",
@@ -37,7 +37,7 @@ def main():
     action2id = dictionaries['action2id']
     id2action = dictionaries['id2action']
     
-    print(f"\n✓ Model loaded successfully!")
+    print(f"\n Model loaded successfully!")
     print(f"   Vocabulary sizes:")
     print(f"      - Forms: {len(form2id):,}")
     print(f"      - UPOS tags: {len(upos2id):,}")
@@ -45,7 +45,7 @@ def main():
     print(f"      - Actions: {len(action2id)}")
     
     # Load test data
-    print(f"\n📄 Loading test data...")
+    print(f"\n Loading test data...")
     reader = ConlluReader()
     test_trees = reader.read_conllu_file("data/en_partut-ud-test_clean.conllu", inference=True)
     print(f"   ✓ Loaded {len(test_trees)} test sentences")
@@ -54,7 +54,7 @@ def main():
     arc_eager = ArcEager()
     
     # Run inference
-    print(f"\n🚀 Running inference on test set...")
+    print(f"\n Running inference on test set...")
     parsed_trees = model.run(
         test_trees, 
         arc_eager, 
@@ -69,7 +69,7 @@ def main():
     print(f"   ✓ Successfully parsed {len(parsed_trees)} sentences")
     
     # Display a sample parsed sentence
-    print(f"\n📝 Sample parsed sentence:")
+    print(f"\n Sample parsed sentence:")
     if parsed_trees and len(parsed_trees) > 0:
         sample_sent = parsed_trees[0]
         print(f"\n   Sentence: {' '.join([token.form for token in sample_sent[1:]])}")
@@ -78,7 +78,7 @@ def main():
             print(f"      {token.id:2d}. {token.form:15s} {token.upos:6s} -> head: {token.head:2d}")
     
     print(f"\n" + "="*60)
-    print("✨ INFERENCE COMPLETE!")
+    print(" INFERENCE COMPLETE!")
     print("="*60)
     
     return parsed_trees
