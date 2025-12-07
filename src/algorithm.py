@@ -483,12 +483,22 @@ class ArcEager():
             # LEFT-ARC: Creates an arc where the Head is the Buffer top (b) and Dependent is the Stack top (s).
             # Then, removes the element from the Stack.
             state.A.add((b.id, dep, s.id))
+
+            # write prediction into the dependent token
+            s.head = b.id      # integer head id
+            s.dep = dep        # string dependency label
+            
             state.S.pop()
 
         elif t == self.RA and self.RA_is_valid(state): 
             # RIGHT-ARC: Creates an arc where the Head is the Stack top (s) and Dependent is the Buffer top (b).
             # Then, moves the element from the Buffer to the Stack.
             state.A.add((s.id, dep, b.id))
+
+            # write prediction into the dependent token # write prediction into the dependent token
+            b.head = s.id
+            b.dep = dep
+            
             state.S.append(b)
             del state.B[0]
 

@@ -22,7 +22,7 @@ def main():
     # Load trained model and dictionaries
     print("\n Loading model from disk...")
     model, dictionaries = load_model(
-        weights_path="models/parser_mlp_weights.h5",
+        weights_path="models/parser_mlp.weights.h5",
         config_path="models/model_config.pkl",
         dictionaries_path="models/dictionaries.pkl"
     )
@@ -75,7 +75,7 @@ def main():
         print(f"\n   Sentence: {' '.join([token.form for token in sample_sent[1:]])}")
         print(f"\n   Token details:")
         for token in sample_sent[1:6]:  # Show first 5 tokens
-            print(f"      {token.id:2d}. {token.form:15s} {token.upos:6s} -> head: {token.head:2d}")
+            print(f"      {token.id:2d}. {token.form:15s} {token.upos:6s} -> head: {token.head:2d}, dep: {token.dep}")
     
     print(f"\n" + "="*60)
     print(" INFERENCE COMPLETE!")
