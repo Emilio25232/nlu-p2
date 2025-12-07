@@ -171,7 +171,7 @@ print(f" Parsed {len(parsed_trees)} test sentences")
 
 # Save results to CoNLLU format (you'll need to implement a writer function)
 output_path = "data/output.conllu"
-reader.write_conllu_file(parsed_trees, output_path)
+reader.write_conllu_file(output_path, parsed_trees)
 print(f' Predicted trees written to "{output_path}"')
 
 # TODO: Utilize the 'postprocessor' module (already implemented).
