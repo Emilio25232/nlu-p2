@@ -170,7 +170,7 @@ parsed_trees = model.run(
 print(f" Parsed {len(parsed_trees)} test sentences")
 
 # Save results to CoNLLU format (you'll need to implement a writer function)
-# writer.write_conllu_file(parsed_trees, "output.conllu")
+reader.write_conllu_file(parsed_trees, "output.conllu")
 
 # TODO: Utilize the 'postprocessor' module (already implemented).
 # 1. Read the output saved in the CoNLLU file and address any issues with ill-formed trees.
